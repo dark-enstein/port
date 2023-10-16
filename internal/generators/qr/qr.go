@@ -3,7 +3,8 @@ package qr
 import (
 	"context"
 	"fmt"
-	"github.com/dark-enstein/port/internal/cloud"
+	"github.com/dark-enstein/port/config"
+	amazon "github.com/dark-enstein/port/internal/cloud/aws"
 	"github.com/dark-enstein/port/util"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -44,6 +45,7 @@ type QR struct {
 	recoveryLevel qrcode.RecoveryLevel
 	Code          *qrcode.QRCode
 	ctx           context.Context
+	uploadedLoc   string
 }
 
 // NewQR generates an empty QR. It receives no arguments, and returns a QR pointer defined by empty fields
@@ -89,24 +91,41 @@ func (q *QR) WithRecoveryLevel(rec qrcode.RecoveryLevel) *QR {
 
 // Generate encodes the content from QR into a QRcode, and saves it on disk/or in buffer.
 func (q *QR) Generate() (string, error) {
-	loc, err := q.generate()
+	return q.upload()
+}
+
+func (q *QR) upload() (string, error) {
+	log := util.RetrieveLoggerFromCtx(q.ctx).WithMethod("Generate()")
+	err := q.generate()
 	if err != nil {
 		return "", err
 	}
+	q.ctx = context.WithValue(q.ctx, util.QRLocInContext, q.uploadedLoc)
 
-	cloud.Cloud()
+	comp := amazon.NewCompose(config.DefaultFlagLOC, amazon.S3E, util.UPLOAD)
+	interact, err := comp.NewSessionWithOptions(q.ctx)
+	if err != nil {
+		log.Error().Err(fmt.Errorf("encountered error while trying to upload qr code: %w", err))
+		return "", err
+	}
 
-	return q.generate()
+	resp := interact.Do(q.ctx)
+	if resp.Err == context.DeadlineExceeded {
+		log.Error().Err(fmt.Errorf("file upload failed due to: %w", err))
+		return "", context.DeadlineExceeded
+	}
+
+	return resp.Name, resp.Err
 }
 
 // generate encodes the content from QR into a QRcode, and saves it on disk/or in buffer.
-func (q *QR) generate() (string, error) {
+func (q *QR) generate() error {
 	log := util.RetrieveLoggerFromCtx(q.ctx).WithMethod("Generate()")
 	var err error
 	q.Code, err = qrcode.New(q.content, q.recoveryLevel)
 	if err != nil {
 		log.Error().Msgf("qrcode.New() failed with error: %w", err)
-		return "", err
+		return err
 	}
 
 	if q.id != "" {
@@ -115,8 +134,9 @@ func (q *QR) generate() (string, error) {
 	factory, err := GetFactory(DefaultFilename, log)
 	if err != nil {
 		log.Error().Msgf("GetFactory() failed with error: %w", err.Error())
-		return "", err
+		return err
 	}
+	q.uploadedLoc = factory.Name()
 
 	defer func(factory *os.File) {
 		err = factory.Close()
@@ -129,8 +149,8 @@ func (q *QR) generate() (string, error) {
 	err = q.Code.Write(q.size, factory)
 	if err != nil {
 		log.Error().Msgf("Writing qrcode image to file failed with error: %w", err)
-		return "", err
+		return err
 	} //write to file and buffer
 
-	return factory.Name(), nil
+	return nil
 }
