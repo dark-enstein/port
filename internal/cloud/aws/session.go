@@ -18,9 +18,12 @@ var (
 )
 
 const (
-	S3E              = "s3"
 	SessionInContext = "session"
-	DefaultBucket    = "PortElvis-gargantuan-panda"
+	DefaultBucket    = "port-elvis-gargantuan-panda" // https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
+)
+
+const (
+	S3E = iota
 )
 
 type Compose struct {
@@ -30,7 +33,7 @@ type Compose struct {
 
 type Action struct {
 	// Name of AWS Service
-	service string
+	service int
 	// Verb denoting action to be performed on service
 	verb int
 	// not sure what this does yet. Removing when next I see this comment.
@@ -48,7 +51,7 @@ type S3UploadFileResponse struct {
 	Err error
 }
 
-func NewCompose(credLoc, service string, verb int) *Compose {
+func NewCompose(credLoc string, service int, verb int) *Compose {
 	return &Compose{
 		credLoc: credLoc,
 		action: &Action{
@@ -72,6 +75,14 @@ func (c *Compose) NewSessionWithOptions(ctx context.Context) (*Interaction, erro
 	return &Interaction{kind: "aws", session: sess}, nil
 }
 
+func (c *Compose) Service() int {
+	return c.action.service
+}
+
+func (c *Compose) Verb() int {
+	return c.action.verb
+}
+
 type Interaction struct {
 	kind    string
 	compose *Compose
@@ -82,17 +93,17 @@ func (i *Interaction) Kind() string {
 	return i.kind
 }
 
-func (i *Interaction) Do(ctx context.Context) *Response {
+func (i *Interaction) Do(ctx context.Context, srv, verb int) *Response {
 	log := util.RetrieveLoggerFromCtx(ctx).WithMethod("Interaction.Do()")
 	ctx = context.WithValue(ctx, SessionInContext, i.session)
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	switch i.compose.action.service {
+	switch srv {
 	case S3E:
 		sss := NewS3(ctx)
 		res := make(chan *Response, 1)
 		log.Debug().Msgf("created new S3 session: %v", sss)
-		switch i.compose.action.verb {
+		switch verb {
 		case util.CREATE:
 		case util.READ:
 		case util.LIST:
@@ -172,7 +183,7 @@ func (s *S3) listBucket(ctx context.Context) *Response {
 	log.Debug().Msg("handler")
 	resp := make(chan *Response, 1)
 	go s.List(ctx, resp)
-	var cliResp *Response
+	cliResp := new(Response)
 	select {
 	case cliResp := <-resp:
 		return cliResp

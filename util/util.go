@@ -85,7 +85,7 @@ func RetrieveReqIDFromCtx(ctx context.Context) string {
 // RetrieveFromCtx is a generic retrieve from context function. It takes in the request context and the key of the value within the contex. The key must be string.
 // It returns an any (interface) value which will be type cast by the consumer of the function.
 func RetrieveFromCtx(ctx context.Context, key string) any {
-	return ctx.Value(RequestIDInContext)
+	return ctx.Value(key)
 }
 
 // ExitOnErrorln exists with and prints an error to StdErr

@@ -8,7 +8,7 @@ import (
 	"github.com/dark-enstein/port/util"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
-	"github.com/skip2/go-qrcode"
+	qrcode "github.com/skip2/go-qrcode"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -109,7 +109,7 @@ func (q *QR) upload() (string, error) {
 		return "", err
 	}
 
-	resp := interact.Do(q.ctx)
+	resp := interact.Do(q.ctx, comp.Service(), comp.Verb())
 	if resp.Err == context.DeadlineExceeded {
 		log.Error().Err(fmt.Errorf("file upload failed due to: %w", err))
 		return "", context.DeadlineExceeded
