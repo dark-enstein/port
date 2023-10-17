@@ -208,10 +208,12 @@ func (s *S3) Upload(ctx context.Context, sess *session.Session, response chan *S
 	}
 
 	// check if specified bucket is created already
+	//var bucket *s3.Bucket TODO: Enable Bucket CLS and uploaded object public access
 	found := false
 	for i := 0; i < len(listResp.Data); i++ {
 		if *listResp.Data[i].Name == DefaultBucket {
 			found = !found
+			//bucket = listResp.Data[i]
 		}
 	}
 
@@ -240,48 +242,57 @@ func (s *S3) Upload(ctx context.Context, sess *session.Session, response chan *S
 		}
 
 		log.Debug().Msgf("bucket created: %s", DefaultBucket)
-	}
+		//} else { TODO: Enable Bucket CLS and uploaded object public access
+		//	//res, err := s.store.GetBucketAcl(&s3.GetBucketAclInput{Bucket: bucket.Name})
+		//	//if err != nil {
+		//	//	util.ExitOnErrorf("retrieving Bucket ACL failed with: %w", err)
+		//	//}
+		//	//res.Grants
+		//	s.store.PutBucketAcl(&s3.PutBucketAclInput{Bucket: aws.String(DefaultBucket), ACL: aws.String("public-read")})
+		//	s.store.PutBucketAcl()
+		//}
 
-	log.Debug().Msgf("preparing to upload to bucket: %s", DefaultBucket)
-	uploader := s3manager.NewUploader(sess)
+		log.Debug().Msgf("preparing to upload to bucket: %s", DefaultBucket)
+		uploader := s3manager.NewUploader(sess)
 
-	// open file for upload
-	log.Debug().Msgf("opening file to be uploaded: %s", DefaultBucket)
-	file, err := os.Open(s.loc)
-	if err != nil {
-		log.Error().Err(fmt.Errorf("error while trying to open file %v for upload: %w", s.loc, err))
-		response <- &S3UploadFileResponse{Err: err}
-	}
-	defer func(file *os.File) {
-		err := file.Close()
+		// open file for upload
+		log.Debug().Msgf("opening file to be uploaded: %s", DefaultBucket)
+		file, err := os.Open(s.loc)
 		if err != nil {
-			log.Error().Err(fmt.Errorf("error while trying to close file: %v", s.loc))
+			log.Error().Err(fmt.Errorf("error while trying to open file %v for upload: %w", s.loc, err))
+			response <- &S3UploadFileResponse{Err: err}
 		}
-	}(file)
+		defer func(file *os.File) {
+			err := file.Close()
+			if err != nil {
+				log.Error().Err(fmt.Errorf("error while trying to close file: %v", s.loc))
+			}
+		}(file)
 
-	// begin upload
-	_, err = uploader.Upload(&s3manager.UploadInput{
-		ACL:         aws.String("public-read"),
-		Bucket:      awsDefaultBucket,
-		Key:         aws.String(s.id),
-		Body:        file,
-		ContentType: aws.String("image/jpg"),
-	})
-	if err != nil {
-		log.Error().Err(fmt.Errorf("error while trying to prepare file %v for upload: %w", s.loc, err))
-		response <- &S3UploadFileResponse{Err: err}
-	}
-	log.Debug().Msgf("file %v uploaded successfully", s.loc)
+		// begin upload
+		_, err = uploader.Upload(&s3manager.UploadInput{
+			ACL:         aws.String("public-read"),
+			Bucket:      awsDefaultBucket,
+			Key:         aws.String(s.id),
+			Body:        file,
+			ContentType: aws.String("image/jpg"),
+		})
+		if err != nil {
+			log.Error().Err(fmt.Errorf("error while trying to prepare file %v for upload: %w", s.loc, err))
+			response <- &S3UploadFileResponse{Err: err}
+		}
+		log.Debug().Msgf("file %v uploaded successfully", s.loc)
 
-	// retrieve the url to the file
-	log.Debug().Msgf("retrieving url to uploaded object")
-	req, _ := s3.New(sess).GetObjectRequest(&s3.GetObjectInput{Bucket: awsDefaultBucket, Key: aws.String(s.id)})
-	rest.Build(req)
-	urlLocation := req.HTTPRequest.URL.String()
-	log.Debug().Msgf("file uploaded to %s", urlLocation)
-	response <- &S3UploadFileResponse{
-		URL: urlLocation,
-		Err: err,
+		// retrieve the url to the file
+		log.Debug().Msgf("retrieving url to uploaded object")
+		req, _ := s3.New(sess).GetObjectRequest(&s3.GetObjectInput{Bucket: awsDefaultBucket, Key: aws.String(s.id)})
+		rest.Build(req)
+		urlLocation := req.HTTPRequest.URL.String()
+		log.Debug().Msgf("file uploaded to %s", urlLocation)
+		response <- &S3UploadFileResponse{
+			URL: urlLocation,
+			Err: err,
+		}
 	}
 }
 
@@ -306,4 +317,4 @@ func (s *S3) CreateBucket(ctx context.Context, response chan *Response) {
 	//}
 }
 
-//TODO: create bucket function, create bucket if not exist function, upload bucket function.
+// TODO: create bucket function, create bucket if not exist function, upload bucket function
