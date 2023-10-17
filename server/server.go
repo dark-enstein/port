@@ -19,6 +19,10 @@ var (
 	S = &Service{}
 )
 
+var (
+	ERR_QR_GENERIC = "ERR_QR_GEN_FAILED"
+)
+
 type Server interface {
 	auth.Authentication
 	internal.Internal
@@ -40,6 +44,12 @@ type Response struct {
 	Resp  string `json:"response"`
 }
 
+type ResponseErr struct {
+	ReqID string `json:"req_id"`
+	TAG   string `json:"tag"`
+	Err   string `json:"error"`
+}
+
 func ConstructResponse(reqID, resp string) *Response {
 	logger := S.Log.With().Str("method", "ConstructResponse()").Logger()
 	r := Response{
@@ -52,6 +62,21 @@ func ConstructResponse(reqID, resp string) *Response {
 }
 
 func (r *Response) MarshalJson() ([]byte, error) {
+	return json.Marshal(&r)
+}
+
+func ConstructErrResponse(reqID, err string) *ResponseErr {
+	logger := S.Log.With().Str("method", "ConstructErrResponse()").Logger()
+	r := ResponseErr{
+		ReqID: reqID,
+		TAG:   ERR_QR_GENERIC,
+		Err:   err,
+	}
+	logger.Info().Msgf("packaging client response %v", r)
+	return &r
+}
+
+func (r *ResponseErr) MarshalJson() ([]byte, error) {
 	return json.Marshal(&r)
 }
 

@@ -140,31 +140,40 @@ func generate(resp http.ResponseWriter, req *http.Request) {
 	//}
 	log.Debug().Msg("successful request validation")
 
-	id := uuid.New()
+	requestId := uuid.New()
+	ctx = context.WithValue(ctx, util.RequestIDInContext, requestId.String())
 
 	var director auth.Director
 	switch mux.Vars(req)["type"] {
 	case TypeQR.String():
-		director = auth.NewQRDirector(S.Ctx, id, qrReq.Content, qrReq.RecoveryLevel, qrReq.Size, S.Cfg)
+		director = auth.NewQRDirector(ctx, requestId, qrReq.Content, qrReq.RecoveryLevel, qrReq.Size, S.Cfg)
 	}
 
 	s, err := director.(*auth.QRDirector).Generate()
 	if err != nil {
 		log.Error().Msgf("qr generation failed with %v", err)
+		genResponse, _ := ConstructErrResponse(requestId.String(), fmt.Sprintf("qr generation failed with %v", err)).MarshalJson()
+		_, err := resp.Write(genResponse)
+		if err != nil {
+			fmt.Fprint(resp, genResponse)
+			return
+		}
 		return
 	}
 	log.Debug().Msgf("qr generated: %v", s)
 
 	// writing response
-	genResponse, err := ConstructResponse(id.String(), fmt.Sprintf("generated file at %v\n", s)).MarshalJson()
+	genResponse, err := ConstructResponse(requestId.String(), fmt.Sprintf("generated file at %v", s)).MarshalJson()
 	if err != nil {
 		log.Error().Msgf("ConstructResponse() failed with %v", err)
+		_, err = resp.Write(genResponse)
 		return
 	}
 	resp.WriteHeader(http.StatusOK)
 	log.Info().Msgf("file at %v\n", s)
 	_, err = resp.Write(genResponse)
 	if err != nil {
+		fmt.Fprint(resp, genResponse)
 		return
 	}
 

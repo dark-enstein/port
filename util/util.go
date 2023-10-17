@@ -2,15 +2,28 @@ package util
 
 import (
 	"context"
+	"fmt"
 	"github.com/dark-enstein/port/config"
 	"github.com/rs/zerolog"
+	"os"
 )
 
 const (
-	LoggerInContext = "logger"
-	ErrorInContext  = "reqError"
-	DBInContext     = "dbConn"
-	ConfigInContext = "serverConfig"
+	LoggerInContext    = "logger"
+	ErrorInContext     = "reqError"
+	DBInContext        = "dbConn"
+	ConfigInContext    = "serverConfig"
+	RequestIDInContext = "requestID"
+	QRLocInContext     = "qrLoc"
+)
+
+const (
+	CREATE = iota
+	READ
+	UPDATE
+	DELETE
+	LIST
+	UPLOAD
 )
 
 var (
@@ -62,4 +75,28 @@ func (l *Logger) WithMethod(meth string) *zerolog.Logger {
 // RetrieveConfigFromCtx returns the *config.Config stored in the request context
 func RetrieveConfigFromCtx(ctx context.Context) *config.Config {
 	return ctx.Value(ConfigInContext).(*config.Config)
+}
+
+// RetrieveReqIDFromCtx returns the request *uuid.UUID stored in the request context
+func RetrieveReqIDFromCtx(ctx context.Context) string {
+	return ctx.Value(RequestIDInContext).(string)
+}
+
+// RetrieveFromCtx is a generic retrieve from context function. It takes in the request context and the key of the value within the contex. The key must be string.
+// It returns an any (interface) value which will be type cast by the consumer of the function.
+func RetrieveFromCtx(ctx context.Context, key string) any {
+	return ctx.Value(key)
+}
+
+// ExitOnErrorln exists with and prints an error to StdErr
+// Adapted from original version here: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/s3-example-basic-bucket-operations.html
+func ExitOnErrorln(msg string) {
+	fmt.Fprintf(os.Stderr, msg+"\n")
+	os.Exit(1)
+}
+
+// ExitOnErrorf exists and prints an error to StdErr. It takes in standard formatting references.
+func ExitOnErrorf(msg string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, msg+"\n", args...)
+	os.Exit(1)
 }
