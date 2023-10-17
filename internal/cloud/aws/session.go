@@ -3,14 +3,15 @@ package amazon
 import (
 	"context"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/private/protocol/rest"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/dark-enstein/port/util"
-	"os"
-	"time"
 )
 
 var (
@@ -260,6 +261,7 @@ func (s *S3) Upload(ctx context.Context, sess *session.Session, response chan *S
 
 	// begin upload
 	_, err = uploader.Upload(&s3manager.UploadInput{
+		ACL:         aws.String("public-read"),
 		Bucket:      awsDefaultBucket,
 		Key:         aws.String(s.id),
 		Body:        file,
