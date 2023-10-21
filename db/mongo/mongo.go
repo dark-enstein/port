@@ -9,11 +9,9 @@ import (
 	"github.com/dark-enstein/port/util"
 	"github.com/rs/zerolog"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
-	"strings"
 )
 
 var (
@@ -110,38 +108,6 @@ func (m *MongoClient) Init(ctx context.Context) (*MongoClient, error) {
 	return m, err
 }
 
-// Create creates the unit argument in mongo
-func (m *MongoClient) Create(ctx context.Context, unit model.Unit, opts model.Opts) *model.DBResponse {
-	llog := RetrieveLoggerFromCtx(ctx, "Create()")
-	m.ctx = ctx
-	switch unit.Kind() {
-	case model.UnitUser:
-		u := unit.(*model.User)
-		m.Opts.ClientOpts = &MongoOptions{
-			Database:         opts.RetrieveDatabase(),
-			Collection:       opts.RetrieveCollection(),
-			Table:            opts.RetrieveTable(),
-			CreateOnNotExist: opts.RetrieveOverride(),
-		}
-		err := m.EnsureDBScaffold(m.ctx, true)
-		//m.collections[m.Opts.ClientOpts.Collection].Find(m.ctx, bson.D{})
-		one, err := m.collections[m.Opts.ClientOpts.Collection].InsertOne(m.ctx, u)
-		if err != nil {
-			return &model.DBResponse{Err: err}
-		}
-		idey := strings.TrimRight(strings.TrimLeft(one.InsertedID.(primitive.ObjectID).String(), `ObjectID(\"`), `\")`)
-		llog.Info().Msgf("created record with ID: %s", idey)
-		return &model.DBResponse{ID: idey, Err: err}
-	}
-
-	llog.Info().Msgf("inferred unit %v doesn't exist", unit.Kind())
-	return &model.DBResponse{Err: errors.New("inferred unit doesn't exist")}
-}
-
-func (m *MongoClient) CreateAll(ctx context.Context, unit []model.Unit, opts model.CreateOpts) *model.DBResponse {
-	return nil
-}
-
 func (m *MongoClient) Ping() bool {
 	err := m.conn.Ping(m.ctx, nil)
 	if err != nil {
@@ -158,7 +124,7 @@ func (m *MongoClient) Host() string {
 	return m.config.host
 }
 
-// EnsureDBScaffold ensures the target database and collections to be used exist
+// EnsureDBScaffold returns an error if the target database and collections to be used exist. If overide is true, it creates the scaffold.
 func (m *MongoClient) EnsureDBScaffold(ctx context.Context, override bool) error {
 	log := RetrieveLoggerFromCtx(ctx, "EnsureDBScaffold()")
 	m.collections = make(map[string]*mongo.Collection)
@@ -203,20 +169,20 @@ func (m *MongoClient) EnsureDBScaffold(ctx context.Context, override bool) error
 	collSlice, err := dbase.ListCollectionNames(ctx, bson.D{{"options.capped", true}}, collectionOpts)
 	log.Info().Msgf("collection slice", collSlice)
 	if err != nil {
-		log.Info().Msgf("error connecting to DB", err.Error())
+		log.Error().Err(fmt.Errorf("error listing collection names: %w", err))
 		return err
 	}
 	if len(collSlice) < 1 {
-		log.Info().Msgf("no collections in specified database: %v", m.Opts.ClientOpts.Database)
+		log.Error().Err(fmt.Errorf("not found: no collections in specified database: %v", m.Opts.ClientOpts.Database))
 		if !override {
-			return fmt.Errorf("no collections in specified database: %v", m.Opts.ClientOpts.Database)
+			return fmt.Errorf("not found: no collections in specified database: %v", m.Opts.ClientOpts.Database)
 		}
 		m.collections[m.Opts.ClientOpts.Collection] = dbase.Collection(m.Opts.ClientOpts.Collection)
 	} else {
 		if !util.IsIn(m.Opts.ClientOpts.Collection, collSlice) {
-			log.Info().Msgf("collection isn't present in specified database: %v", m.Opts.ClientOpts.Database)
+			log.Info().Msgf("not found: collection isn't present in specified database: %v", m.Opts.ClientOpts.Database)
 			if !override {
-				return fmt.Errorf("collection isn't present in specified database: %v", m.Opts.ClientOpts.Database)
+				return fmt.Errorf("not found: collection isn't present in specified database: %v", m.Opts.ClientOpts.Database)
 			}
 			m.collections[m.Opts.ClientOpts.Collection] = dbase.Collection(m.Opts.ClientOpts.Collection)
 		}

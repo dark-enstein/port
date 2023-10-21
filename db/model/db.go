@@ -4,13 +4,14 @@ import "github.com/dark-enstein/port/util"
 
 var (
 	Tables         = map[string]string{}
-	UserDB         = "users"
-	UserCollection = "user-info"
+	UserDB         = "port"
+	UserCollection = "users"
 )
 
 type DBResponse struct {
 	Err      error
 	ID       string
+	Content  interface{}
 	Metadata Metadata
 }
 

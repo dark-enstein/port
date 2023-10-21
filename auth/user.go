@@ -2,11 +2,17 @@ package auth
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"github.com/dark-enstein/port/config"
 	"github.com/dark-enstein/port/db"
 	"github.com/dark-enstein/port/db/model"
 	"github.com/rs/zerolog"
+	"io"
 	"strconv"
 	"strings"
 	"sync"
@@ -108,14 +114,18 @@ func (p *Permission) ToBinary() *int64 {
 }
 
 type User struct {
-	Name  string `json:"name"`
-	Birth string `json:"dob"`
+	Name     string `json:"name"`
+	Birth    string `json:"dob"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 // InternalUser struct for performing various computing before making it ready for the DB
 type InternalUser struct {
-	name  Name
-	birth DateOfBirth
+	name     Name
+	birth    DateOfBirth
+	username string
+	password string
 }
 
 func (u InternalUser) Name() *Name {
@@ -151,12 +161,63 @@ func (u InternalUser) GetRoles() RoleSet {
 
 func (u InternalUser) IntoUserModel(ctx context.Context) *model.User {
 	log := GetLoggerFromCtx(ctx).With().Str("method", "InternalUser.IntoUserModel()").Logger()
+	hash, err := hashPassword(u.password)
+	if err != nil {
+		log.Error().Err(fmt.Errorf("unable to hash password: %w", err))
+		return nil
+	}
 	mU := model.NewUser(ctx).WithName(
 		&model.Name{FirstName: u.Name().RetrieveFirstName(), LastName: u.Name().RetrieveLastName()}).WithBirthDate(
 		u.BirthDate()).WithRoleSet(
-		&model.RoleSet{VanillaUser.ToBinary()})
+		&model.RoleSet{VanillaUser.ToBinary()}).WithUsername(u.username).WithPasswordHash(hash)
 	log.Debug().Msgf("converted Internal user %v into Model user %v successfully", u, mU)
 	return mU
+}
+
+// hashPassword hashes the password
+func hashPassword(orig string, key ...string) (string, error) {
+	keyToBeUsed := []byte(config.DefaultSecretKey)
+	if len(key) != 0 {
+		keyToBeUsed = []byte(key[0])
+	}
+	block, err := aes.NewCipher(keyToBeUsed)
+	if err != nil {
+		return "", err
+	}
+	b := base64.StdEncoding.EncodeToString([]byte(orig))
+	ciphertext := make([]byte, aes.BlockSize+len(b))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return "", err
+	}
+	cfb := cipher.NewCFBEncrypter(block, iv)
+	cfb.XORKeyStream(ciphertext[aes.BlockSize:], []byte(b))
+	return string(ciphertext), nil
+}
+
+// deHashPassword hashes the password
+func deHashPassword(orig string, key ...string) (string, error) {
+	keyToBeUsed := []byte(config.DefaultSecretKey)
+	if len(key) != 0 {
+		keyToBeUsed = []byte(key[0])
+	}
+	origByte := []byte(orig)
+	block, err := aes.NewCipher(keyToBeUsed)
+	if err != nil {
+		return "", err
+	}
+	if len(origByte) < aes.BlockSize {
+		return "", errors.New("ciphertext too short")
+	}
+	iv := origByte[:aes.BlockSize]
+	origByte = origByte[aes.BlockSize:]
+	cfb := cipher.NewCFBDecrypter(block, iv)
+	cfb.XORKeyStream(origByte, origByte)
+	data, err := base64.StdEncoding.DecodeString(string(origByte))
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 type Name struct {
