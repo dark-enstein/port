@@ -15,11 +15,12 @@ type Configurer interface {
 //}
 
 type Config struct {
-	LogLevel  string      `json:"log_level"`
-	Port      string      `json:"server_port"`
-	EnabledDB string      `json:"enabled_db"`
-	DBHost    string      `json:"db_host"`
-	Cloud     CloudConfig `json:"cloud"`
+	LogLevel     string      `json:"log_level"`
+	Port         string      `json:"server_port"`
+	EnabledDB    string      `json:"enabled_db"`
+	JWTSecretKey []byte      `json:"jwt_secret_key"`
+	DBHost       string      `json:"db_host"`
+	Cloud        CloudConfig `json:"cloud"`
 }
 
 type CloudConfig struct {

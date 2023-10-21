@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
 	"time"
 )
 
@@ -13,9 +14,12 @@ var (
 
 // User holds the user information, and it is ready for working with the DB
 type User struct {
-	Name  *Name    `bson:"name,inline"`
-	Birth *string  `bson:"name"`
-	Roles *RoleSet `bson:"role_set,omitempty"`
+	UserID   string   `bson:"user_id"`
+	Name     *Name    `bson:"name,inline"`
+	Birth    *string  `bson:"birth"`
+	Roles    *RoleSet `bson:"role_set,omitempty"`
+	Username string   `bson:"username"`
+	Password string   `bson:"password"`
 }
 
 // UserOptions holds the user request options, and it is ready for working with the DB
@@ -86,12 +90,35 @@ func (u *User) WithRoleSet(rs *RoleSet) *User {
 	return u
 }
 
+func (u *User) WithUsername(username string) *User {
+	mlog := glog.WithMethod("WithUsername()")
+	u.Username = username
+	mlog.Info().Msgf("added username %v to user model", u.Username)
+	return u
+}
+
+func (u *User) WithPasswordHash(pwHash string) *User {
+	mlog := glog.WithMethod("WithPassword()")
+	u.Password = pwHash
+	mlog.Info().Msgf("added password hash %v to user model", u.Password)
+	return u
+}
+
 func (u *User) GetTime() time.Time {
 	return time.Now()
 }
 
 func (u *User) Kind() string {
 	return UnitUser
+}
+
+func (u *User) FindFilter() interface{} {
+	return &bson.D{
+		{"user_id", u.UserID},
+		{"name", u.Name},
+		{"birth", u.Birth},
+		{"username", u.Username},
+	}
 }
 
 func (u *User) NameStr() string {

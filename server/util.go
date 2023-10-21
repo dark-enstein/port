@@ -74,6 +74,7 @@ func createUserValidate(j *json.Decoder, resp http.ResponseWriter) (*auth.Intern
 
 	aga := auth.NewUser()
 	log.Info().Msgf("%v", j)
+
 	err := j.Decode(&aga)
 	if err != nil {
 		var syntaxError *json.SyntaxError
@@ -135,6 +136,9 @@ func createUserValidate(j *json.Decoder, resp http.ResponseWriter) (*auth.Intern
 		}
 		return nil, false
 	}
+
+	// validate username
+	// validate password
 
 	err = j.Decode(&struct{}{})
 	if !errors.Is(err, io.EOF) {

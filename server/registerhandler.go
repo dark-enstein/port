@@ -69,6 +69,14 @@ func registerUser(resp http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	genJWT, err := auth.NewJWT(reqId.String(), "Port", "Register", "Port Inc", time.Duration(5000), S.Cfg.JWTSecretKey)
+	if err != nil {
+		log.Error().Err(fmt.Errorf("error ehile generating JWT: %w", err))
+		return
+	}
+	resp.Header().Set("Authorization", fmt.Sprintf("Bearer %s", genJWT))
+	// store in redis?
+
 	// from here on out copy data into internals
 	director := auth.NewUserDirector(ctx)
 	log.Debug().Msg("setting up director")
@@ -91,7 +99,7 @@ func registerUser(resp http.ResponseWriter, req *http.Request) {
 	director.Mutex.Unlock()
 
 	// build http response
-	respBytes, err := ConstructResponse(reqId.String(), fmt.Sprintf("user created with ids: %v", ids)).MarshalJson()
+	respBytes, err := ConstructResponse(reqId.String(), fmt.Sprintf("user created with ids: %v", ids), string(genJWT)).MarshalJson()
 	log.Debug().Msg("contents of response to client " + string(respBytes))
 	if len(respBytes) < 1 || err != nil {
 		resp.WriteHeader(http.StatusInternalServerError)

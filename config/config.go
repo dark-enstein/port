@@ -16,6 +16,7 @@ func ResolveConfig(class int) (*Configurer, error) {
 		set.StringVar(&eCfg.port, FlagPort, DefaultFlagPort, "-")
 		set.StringVar(&eCfg.enabledDB, FlagDB, DefaultFlagDB, "-")
 		set.StringVar(&eCfg.dBHost, FlagDBHost, DefaultFlagDBHost, "-")
+		set.StringVar(&eCfg.jwtSecretLoc, FlagDB, DefaultJWTSecretLOC, "-")
 		set.StringVar(&eCfg.cloud.provider, FlagProvider, DefaultFlagProvider, "-")
 		set.StringVar(&eCfg.cloud.loc, FlagLOC, DefaultFlagLOC, "-")
 		err := set.Parse(os.Args[1:])

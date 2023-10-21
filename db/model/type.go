@@ -1,8 +1,11 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 type Unit interface {
 	Kind() string
 	GetTime() time.Time
+	FindFilter() interface{}
 }

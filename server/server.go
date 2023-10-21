@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dark-enstein/port/auth"
 	"github.com/dark-enstein/port/config"
 	"github.com/dark-enstein/port/db"
 	"github.com/dark-enstein/port/internal"
@@ -24,7 +23,6 @@ var (
 )
 
 type Server interface {
-	auth.Authentication
 	internal.Internal
 	//PingDependencies(bool) error // TODO. Implement Ping dependencies
 	//ValidateJWT(string) error // TODO. Implement JWT. Validate JWT
@@ -42,6 +40,7 @@ type Response struct {
 	ReqID string `json:"req_id"`
 	Time  string `json:"time"`
 	Resp  string `json:"response"`
+	Auth  string `json:"auth"`
 }
 
 type ResponseErr struct {
@@ -50,12 +49,13 @@ type ResponseErr struct {
 	Err   string `json:"error"`
 }
 
-func ConstructResponse(reqID, resp string) *Response {
+func ConstructResponse(reqID, resp string, auth ...string) *Response {
 	logger := S.Log.With().Str("method", "ConstructResponse()").Logger()
 	r := Response{
 		ReqID: reqID,
 		Time:  time.Now().String(),
 		Resp:  resp,
+		Auth:  auth[0],
 	}
 	logger.Info().Msgf("packaging client response %v", r)
 	return &r
@@ -91,7 +91,6 @@ type Service struct {
 	r   *mux.Router
 	DB  db.DB
 
-	auth.Authentication
 	internal.Repository
 }
 

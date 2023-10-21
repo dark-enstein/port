@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"github.com/dark-enstein/port/db/model"
 )
 
 const (
@@ -19,8 +20,9 @@ var (
 	DefaultFlagDB       = "mongo"
 	DefaultFlagDBHost   = "mongodb://localhost:27017/"
 	DefaultFlagPort     = "8090"
-	DefaultDBName       = "port"
+	DefaultDBName       = model.UserDB
 	DefaultFlagProvider = "aws"
+	DefaultJWTSecretLOC = "./.jwt/secret"
 	DefaultFlagLOC      = "~/.aws/credentials"
 )
 
