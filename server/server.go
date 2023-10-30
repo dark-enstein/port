@@ -9,6 +9,7 @@ import (
 	"github.com/dark-enstein/port/db"
 	"github.com/dark-enstein/port/internal"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"net/http"
 	"sync"
@@ -110,6 +111,7 @@ func (s *Service) RegisterRoutes() *Service {
 	s.r.HandleFunc("/ping", ping).Methods(http.MethodGet)
 	s.r.HandleFunc("/register", registerUser).Methods(http.MethodPost)
 	s.r.HandleFunc("/generate/{type}", generate).Methods(http.MethodPost)
+	s.r.Handle("/metrics", promhttp.Handler()).Methods(http.MethodGet)
 	//s.r.HandleFunc("/register-tickets", register).Methods(http.MethodPost)
 	return s
 }
