@@ -24,4 +24,7 @@ clean:
 	@sleep 1
 	@echo Dangling images deleted.
 
+#TODO:
+#support testing
+#support other go commands
 #makefile tpl: https://github.com/TheNetAdmin/Makefile-Templates/blob/master/SmallProject/Template/Makefile
