@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 
+#PURE FUNCTIONS DEFINITION
+function intro() {
+    echo "
+  ██████   ██████  ██████  ████████
+  ██   ██ ██    ██ ██   ██    ██
+  ██████  ██    ██ ██████     ██
+  ██      ██    ██ ██   ██    ██
+  ██       ██████  ██   ██    ██
+
+    Copyright ©2023 Port Inc®. All Rights Reserved.\n"
+}
+
 mkdir -p /tmpserver/app/bin /tmpserver/app/etc /tmpserver/app/lib
 ldd /bin/bash /bin/ls
 cp /bin/bash /bin/ls /tmpserver/app/bin
