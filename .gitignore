@@ -2,3 +2,4 @@
 .idea/**
 .qr/
 .qr/**
+.env
