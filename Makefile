@@ -22,9 +22,9 @@ docker-run:
 	docker run -it --publish 127.0.0.1:8090:8090/tcp --label "head=port" --restart=unless-stopped --rm port:1.0
 
 docker-push:
-	docker login --username $(REGISTRY_USERNAME) --password-stdin <<<$(REGISTRY_PASSWORD); \
-	docker tag port:1.0 date:$(shell date '+%s'); \
-	docker push port:1.0 --all-tags
+	@docker login --username $(REGISTRY_USERNAME) --password-stdin <<<$(REGISTRY_PASSWORD); \
+	@docker tag port:1.0 date:$(shell date '+%s'); \
+	@docker push port:1.0 --all-tags
 
 install-bin-deps: install-shellcheck
 
