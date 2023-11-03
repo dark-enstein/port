@@ -15,16 +15,16 @@ test-all:
 #	go test ./...
 
 docker-build:
-	docker build --force-rm --tag port:1.0 --label "head=port" .
+	docker build --force-rm --tag brownbarg/port:1.0 --label "head=port" .
 	#docker tag port:1.0 sample-app
 
 docker-run:
-	docker run -it --publish 127.0.0.1:8090:8090/tcp --label "head=port" --restart=unless-stopped --rm port:1.0
+	docker run -it --publish 127.0.0.1:8090:8090/tcp --label "head=port" --restart=unless-stopped --rm brownbarg/port:1.0
 
 docker-push:
-	@docker login --username $(REGISTRY_USERNAME) --password-stdin <<<$(REGISTRY_PASSWORD); \
-	@docker tag port:1.0 date:$(shell date '+%s'); \
-	@docker push port:1.0 --all-tags
+	@docker login --username $(REGISTRY_USERNAME) --password-stdin <<<$(REGISTRY_PASSWORD)
+	@docker tag brownbarg/port:1.0 date:$(shell date '+%s')
+	@docker push brownbarg/port --all-tags
 
 install-bin-deps: install-shellcheck
 
@@ -49,6 +49,23 @@ load_envs:
 	$(foreach var,$(include_env),$(eval $(var)))
 
 run: docker-build docker-run
+
+#setup-precommit: fix later
+#	@touch .git/hooks/pre-commit
+#	@cat <<EOT >> .git/hooks/pre-commit
+#	#!/bin/env bash
+#
+#	# Set up secret redaction
+#	cp ./../../.env .env
+#	sh ./../../beforecommit.sh
+#	mv .env.example ./../../.env.example
+#
+#	exit 0
+#	EOT
+#	@echo Written
+#	@chmod +x pre-commit
+
+
 
 shellcheck: install-bin-deps
 	@echo "Checking scripts: $(ALL_SH_SCRIPT)"
