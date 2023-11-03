@@ -2,7 +2,7 @@
 
 #PURE FUNCTIONS DEFINITION
 function intro() {
-    echo "
+    printf "
   ██████   ██████  ██████  ████████
   ██   ██ ██    ██ ██   ██    ██
   ██████  ██    ██ ██████     ██
